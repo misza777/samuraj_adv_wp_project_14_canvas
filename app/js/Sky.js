@@ -4,7 +4,17 @@ export default class Sky {
         this.ctx = canvas.getContext('2d');
         this.width = window.innerWidth;
         this.height = window.innerHeight;
-        this.stars
+        // this.stars
+        //informacja kiedy zostala stworzona ostatnia konstelacja
+        this.lastConstellation = 0;
+        this.nextConstellation = Math.random() * 3000;
+        // poniewaz odwolujemy sie do obiektu ktory nie istnieje to inicjujemy obiekt
+        this.constellation = {
+            stars:[],
+            isClosed: false,
+            width: null,
+        }
+        
     }
     
     initCanvas() {
@@ -19,7 +29,8 @@ export default class Sky {
         let stars = [];
 
         for (var i = 0; i < count; i++) {
-            // rozmiar radius od 2 do 5???
+            // rozmiar radius od 2 do 5
+            // Math.floor(Math.random() * (max - min) ) + min;
             const radius = Math.random() * 3 + 2; 
             // console.log(radius);
 
@@ -67,6 +78,72 @@ export default class Sky {
         })
     }
 
+    //rysujemy wybrana losowo konstelacje
+    generateRandomConstellation= () => {
+        // srodek ekranu * losowa liczba od 0.5 do .99
+        //x,y - srodek okregu
+        //this.width - this.width/2 - wartosci dodatnie i ujemne
+        const x = (this.width /2) + Math.random() * 0.8 * this.width - this.width/2;
+        const y = (this.height /2) + Math.random() * 0.8 * this.height - this.height/2;
+        const radius = (this.height /2) * Math.random() * 0.5 + 0.5;
+
+        this.constellation = {
+            stars: this.stars.filter( star => {
+             return star.x > x - radius
+                && star.x < x + radius
+                && star.y > y - radius
+                && star.y < y + radius
+            }).slice(0, Math.round(Math.random() * 7 + 3)),
+            //przyjmuje wartosci true/flase
+            isClosed: Math.random() > 0.5, 
+            width: 5,
+        }
+    }
+
+    // korekta grubosci kosnstelacji
+    updateConstellation = () => {
+        if(this.constellation.width > 0) {
+            this.constellation.width -= 0.05;
+            //jesli spadnie do zera to zero
+        } else this.constellation.width = 0;
+    }
+
+    drawConstellation = () => {
+        const {stars, isClosed, width} = this.constellation;
+        const starsCount = stars.length;
+
+        //zabezpieczenie coby nie wychodzic poza ekran
+        // if(!starsCount) return false;
+
+        //zabezpieczenie jesli sa min 2 gwiazdy
+        if(starsCount > 2) {
+
+        const firstStar = stars[0];
+        // const lastStar = stars[starsCount-1];
+
+        //rysowanie
+        this.ctx.beginPath();
+        //pierwsze polaczenie, przesuniecie do pozycji pierwszej gwiazdy 
+        this.ctx.moveTo(firstStar.x, firstStar.y);
+        this.ctx.lineTo(stars[1].x, stars[1].y);
+        
+        // starsCount-1 zeby nie wyskoczyc poza zakres
+        for (let i = 1; i < starsCount-1; i++) {
+            const nextStar = stars[i + 1];
+            this.ctx.lineTo(nextStar.x, nextStar.y);
+        }
+        //rysowanie ostatniej kreski do ostatniej gwiazdy
+        if(isClosed) {
+            this.ctx.lineTo(firstStar.x, firstStar.y);
+        }
+
+        this.ctx.strokeStyle = '#71FF33';
+        this.ctx.lineWidth = width;
+        this.ctx.stroke();
+    } 
+    }
+
+
     //robimy winiete
     drawOverlayer() {
         //srodek poczatek
@@ -113,23 +190,38 @@ export default class Sky {
 
 
     //czyszczenie canvasa, animowanie gwiazd
-    draw() {
+    draw(now) {
+        // console.log(now);
+        
         this.clearCanvas();
         this.drawStars();
         this.updateStars();
+
+        this.drawConstellation();
+        this.updateConstellation();
         //metoda ostatnia winieta
         this.drawOverlayer();
-
+        //czas tworzenia konstelacji
+        if(now - this.lastConstellation > this.nextConstellation) {
+            this.lastConstellation = now;
+            // minimum 1sek
+            this.nextConstellation = Math.random() * 1500 + 2000;
+            this.generateRandomConstellation();
+        }
         // klatka 60 klatek na sekunde - funkcja odswiezania animacji!!!!
         //dajemy funkcje strzalkowa poniewaz chcemy zachowac nasz scope!
         //inaczej this jest pojebany
-        window.requestAnimationFrame(() => this.draw());
+        //now - parametr time-stamp - czas w milisekundach
+        window.requestAnimationFrame((now) => this.draw(now));
     }
 
 
     run() {
         this.initCanvas();
         this.generateStars(1000);
+        //beacuse of time stamp
+        // this.generatRandomConstellation();
+
         // pierwszy raz musi byc wywolana recznie
         this.draw();
         // this.drawStar(
