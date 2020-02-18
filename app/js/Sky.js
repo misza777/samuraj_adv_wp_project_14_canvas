@@ -14,7 +14,8 @@ export default class Sky {
             isClosed: false,
             width: null,
         }
-        
+        //delta
+        this.lastUpdate = 0;
     }
     
     initCanvas() {
@@ -59,14 +60,15 @@ export default class Sky {
     // update gwiazd potrzebny do ich animacji i przemieszczania
     updateStars() {
         this.stars.forEach(star => {
-            star.x += star.speed;
+            //dalta ma ok 16 ms
+            star.x += star.speed * (this.delta / 16);
             // warunek nie pozwala uciec gwiazdom z ekranu:)
             //margines to srednica gwiazdy =2*star.radius
 
             //ruch kulisty ziemi = lekko po luku
             //do polowy ekranu gwiazda porusza si edo gor a po polowie w dol!:)
             //podzielone bo ma isc wolniej
-            star.y -= star.speed * ((this.width/2 - star.x)) / 1500;
+            star.y -= star.speed * (this.delta / 16) * ((this.width/2 - star.x)) / 1500;
             //miogotanie gwiazdy
             star.radius = star.originalRadius * (Math.random() /4 +0.9);
 
@@ -100,10 +102,10 @@ export default class Sky {
         }
     }
 
-    // korekta grubosci kosnstelacji
+    // korekta grubosci kosnstelacji - efekt cieniowania
     updateConstellation = () => {
         if(this.constellation.width > 0) {
-            this.constellation.width -= 0.05;
+            this.constellation.width -= 0.05 * (this.delta / 16);
             //jesli spadnie do zera to zero
         } else this.constellation.width = 0;
     }
@@ -191,6 +193,11 @@ export default class Sky {
 
     //czyszczenie canvasa, animowanie gwiazd
     draw(now) {
+        //uplynnianie animacji
+        this.delta = now - this.lastUpdate;
+        // if(this.delta < 16 || this.delta > 16) console.log(this.delta);
+
+        
         // console.log(now);
         
         this.clearCanvas();
@@ -208,6 +215,8 @@ export default class Sky {
             this.nextConstellation = Math.random() * 1500 + 2000;
             this.generateRandomConstellation();
         }
+
+        this.lastUpdate = now;
         // klatka 60 klatek na sekunde - funkcja odswiezania animacji!!!!
         //dajemy funkcje strzalkowa poniewaz chcemy zachowac nasz scope!
         //inaczej this jest pojebany
@@ -223,7 +232,8 @@ export default class Sky {
         // this.generatRandomConstellation();
 
         // pierwszy raz musi byc wywolana recznie
-        this.draw();
+        //przekazujemy wartosc now=0 zeby sie dorze wyliczyla delta 
+        this.draw(0);
         // this.drawStar(
             // {
             //         x: 100,
